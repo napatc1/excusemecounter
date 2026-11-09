@@ -1,24 +1,18 @@
 # Excuse Me Counter
 
-A website that asks **"Enter a Username:"**.
+A GitHub Pages site that asks **"Enter a Username:"**.
 
 - If the username is the secret word, every press of the **spacebar** adds 1 to the counter.
-- Anyone else sees the same big number update live, but can't change it.
-- The count never resets.
+- Everyone else sees the same big number update live, but can't change it.
+- The count never resets. It's stored in Supabase.
 
-## Run locally
+## How the secret stays secret
 
-```bash
-npm install
-EDITOR_SECRET=yourSecretWord npm start
-```
+The secret word is not in this repo. Supabase stores only a hash of it, in a table the public can't read. The page asks the database "is this the right word?", and the database decides who can add to the counter.
 
-The secret word is only ever stored in the `EDITOR_SECRET` environment variable, never in the code. On a host like Render, add it under Environment Variables.
+## Setup
 
-Then open http://localhost:3000.
+1. In Supabase, open **SQL Editor**, paste in `supabase-setup.sql`, replace `YOUR_SECRET_WORD` with your word, and run it. Don't commit your real word.
+2. In GitHub, go to **Settings → Pages**, set the source to **Deploy from a branch**, choose `main` and `/ (root)`, then save.
 
-## Keeping the count permanently
-
-Without a database, the count is saved to `count.json`. That works on your own computer or a server with a persistent disk.
-
-Many free hosts (like Render's free tier) wipe files on every redeploy. On those hosts, set a `DATABASE_URL` environment variable pointing at a Postgres database (Render Postgres, Supabase, Neon, etc.). The table is created automatically.
+To change the word later, run only the last `insert ... on conflict` statement from the setup file with a new word.

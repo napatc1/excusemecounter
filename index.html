@@ -18,11 +18,7 @@
       text-align: center;
       padding: 20px;
     }
-    #login label {
-      display: block;
-      font-size: 2rem;
-      margin-bottom: 16px;
-    }
+    #login label { display: block; font-size: 2rem; margin-bottom: 16px; }
     #login input {
       font-size: 1.5rem;
       padding: 10px 14px;
@@ -43,11 +39,7 @@
       cursor: pointer;
     }
     #counter { display: none; }
-    #title {
-      font-size: clamp(2rem, 7vw, 5rem);
-      font-weight: 800;
-      margin: 0 0 10px;
-    }
+    #title { font-size: clamp(2rem, 7vw, 5rem); font-weight: 800; margin: 0 0 10px; }
     #count {
       font-size: clamp(5rem, 25vw, 16rem);
       font-weight: 900;
@@ -85,64 +77,72 @@
     <button id="tap">Press (for phones)</button>
   </div>
 
-  <script>
+  <script type="module">
+    import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
+
+    // Public project URL and publishable key (safe to be public).
+    // The secret word is NOT here: the database checks it.
+    const supabase = createClient(
+      "https://flifswwrhevzjwwhqitc.supabase.co",
+      "sb_publishable_7IMTnMht7y8er5RoyyXZng_g6wbkAPW"
+    );
+
     let username = "";
     let isEditor = false;
+    let current = 0;
 
     const countEl = document.getElementById("count");
     const hintEl = document.getElementById("hint");
     const tapBtn = document.getElementById("tap");
 
     function show(n) {
-      countEl.textContent = Number(n).toLocaleString();
+      n = Number(n);
+      if (n < current) return; // ignore stale updates arriving out of order
+      current = n;
+      countEl.textContent = n.toLocaleString();
       countEl.classList.add("bump");
       setTimeout(() => countEl.classList.remove("bump"), 80);
     }
 
-    // Live updates so everyone sees the number change
-    function connect() {
-      const es = new EventSource("/api/stream");
-      es.onmessage = (e) => show(JSON.parse(e.data).count);
-      es.onerror = () => { es.close(); setTimeout(connect, 2000); };
+    async function refresh() {
+      const { data } = await supabase.from("excuseme_counter").select("value").eq("id", 1).single();
+      if (data) show(data.value);
+    }
+
+    function watch() {
+      refresh();
+      supabase
+        .channel("excuseme")
+        .on("postgres_changes",
+          { event: "UPDATE", schema: "public", table: "excuseme_counter" },
+          (p) => show(p.new.value))
+        .subscribe();
+      setInterval(refresh, 5000); // backup in case live updates drop
     }
 
     async function press() {
-      try {
-        const r = await fetch("/api/press", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ username }),
-        });
-        if (r.ok) show((await r.json()).count);
-      } catch {}
+      const { data, error } = await supabase.rpc("excuseme_press", { word: username });
+      if (!error) show(data);
     }
 
     document.getElementById("login").addEventListener("submit", async (e) => {
       e.preventDefault();
       username = document.getElementById("username").value.trim();
       if (!username) return;
-      try {
-        const r = await fetch("/api/login", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ username }),
-        });
-        isEditor = r.ok && (await r.json()).editor === true;
-      } catch { isEditor = false; }
+      const { data } = await supabase.rpc("excuseme_check", { word: username });
+      isEditor = data === true;
 
       document.getElementById("login").style.display = "none";
       document.getElementById("counter").style.display = "block";
-      hintEl.textContent = isEditor
-        ? "Press the SPACEBAR to add 1."
-        : "Watching as " + username + ".";
+      hintEl.textContent = isEditor ? "Press the SPACEBAR to add 1." : "Watching as " + username + ".";
       if (isEditor) tapBtn.style.display = "inline-block";
-      connect();
+      watch();
     });
 
     document.addEventListener("keydown", (e) => {
       if (!isEditor || e.code !== "Space") return;
       e.preventDefault();
-      if (e.repeat) return; // holding the key down counts once
+      if (e.repeat) return; // holding the key counts once
       press();
     });
 
