@@ -122,14 +122,20 @@
 
     async function press() {
       const { data, error } = await supabase.rpc("excuseme_press", { word: username });
-      if (!error) show(data);
+      if (error) console.error(error);
+      else show(data);
     }
 
     document.getElementById("login").addEventListener("submit", async (e) => {
       e.preventDefault();
       username = document.getElementById("username").value.trim();
       if (!username) return;
-      const { data } = await supabase.rpc("excuseme_check", { word: username });
+      const { data, error } = await supabase.rpc("excuseme_check", { word: username });
+      if (error) {
+        alert("Couldn't connect to the counter. Try refreshing the page.");
+        console.error(error);
+        return;
+      }
       isEditor = data === true;
 
       document.getElementById("login").style.display = "none";
