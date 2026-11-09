@@ -1,0 +1,16 @@
+{
+  "name": "excusemecounter",
+  "version": "1.0.0",
+  "description": "Live counter of how many times excusemeee has pressed the spacebar",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "express": "^4.21.2",
+    "pg": "^8.13.1"
+  }
+}

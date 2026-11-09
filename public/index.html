@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Excuse Me Counter</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+      background: #111;
+      color: #fff;
+      text-align: center;
+      padding: 20px;
+    }
+    #login label {
+      display: block;
+      font-size: 2rem;
+      margin-bottom: 16px;
+    }
+    #login input {
+      font-size: 1.5rem;
+      padding: 10px 14px;
+      border-radius: 8px;
+      border: 2px solid #444;
+      background: #222;
+      color: #fff;
+      width: min(320px, 80vw);
+    }
+    #login button {
+      font-size: 1.5rem;
+      padding: 10px 20px;
+      margin-left: 8px;
+      border-radius: 8px;
+      border: none;
+      background: #ffcc00;
+      color: #111;
+      cursor: pointer;
+    }
+    #counter { display: none; }
+    #title {
+      font-size: clamp(2rem, 7vw, 5rem);
+      font-weight: 800;
+      margin: 0 0 10px;
+    }
+    #count {
+      font-size: clamp(5rem, 25vw, 16rem);
+      font-weight: 900;
+      color: #ffcc00;
+      line-height: 1;
+      font-variant-numeric: tabular-nums;
+      transition: transform 0.08s;
+    }
+    #count.bump { transform: scale(1.08); }
+    #hint { margin-top: 24px; font-size: 1.2rem; color: #aaa; }
+    #tap {
+      display: none;
+      margin-top: 20px;
+      font-size: 1.3rem;
+      padding: 14px 28px;
+      border-radius: 10px;
+      border: none;
+      background: #ffcc00;
+      color: #111;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <form id="login">
+    <label for="username">Enter a Username:</label>
+    <input id="username" autocomplete="off" autofocus />
+    <button type="submit">Go</button>
+  </form>
+
+  <div id="counter">
+    <h1 id="title">Times excusemeee pressed SPACE</h1>
+    <div id="count">0</div>
+    <div id="hint"></div>
+    <button id="tap">Press (for phones)</button>
+  </div>
+
+  <script>
+    const EDITOR = "excusemeee";
+    let username = "";
+    let isEditor = false;
+
+    const countEl = document.getElementById("count");
+    const hintEl = document.getElementById("hint");
+    const tapBtn = document.getElementById("tap");
+
+    function show(n) {
+      countEl.textContent = Number(n).toLocaleString();
+      countEl.classList.add("bump");
+      setTimeout(() => countEl.classList.remove("bump"), 80);
+    }
+
+    // Live updates so everyone sees the number change
+    function connect() {
+      const es = new EventSource("/api/stream");
+      es.onmessage = (e) => show(JSON.parse(e.data).count);
+      es.onerror = () => { es.close(); setTimeout(connect, 2000); };
+    }
+
+    async function press() {
+      try {
+        const r = await fetch("/api/press", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ username }),
+        });
+        if (r.ok) show((await r.json()).count);
+      } catch {}
+    }
+
+    document.getElementById("login").addEventListener("submit", (e) => {
+      e.preventDefault();
+      username = document.getElementById("username").value.trim();
+      if (!username) return;
+      isEditor = username === EDITOR;
+
+      document.getElementById("login").style.display = "none";
+      document.getElementById("counter").style.display = "block";
+      hintEl.textContent = isEditor
+        ? "Hi excusemeee! Press the SPACEBAR to add 1."
+        : "Watching as " + username + ". Only excusemeee can change the counter.";
+      if (isEditor) tapBtn.style.display = "inline-block";
+      connect();
+    });
+
+    document.addEventListener("keydown", (e) => {
+      if (!isEditor || e.code !== "Space") return;
+      e.preventDefault();
+      if (e.repeat) return; // holding the key down counts once
+      press();
+    });
+
+    tapBtn.addEventListener("click", (e) => { e.currentTarget.blur(); press(); });
+  </script>
+</body>
+</html>
