@@ -2,7 +2,20 @@ const express = require("express");
 const fs = require("fs");
 const path = require("path");
 
-const EDITOR = "excusemeee";
+const crypto = require("crypto");
+
+// The secret word is NOT stored in the code. Set it as an environment variable:
+//   EDITOR_SECRET=yourword npm start
+const EDITOR_SECRET = process.env.EDITOR_SECRET || "";
+if (!EDITOR_SECRET) console.warn("EDITOR_SECRET is not set - nobody will be able to change the counter.");
+
+function isEditor(word) {
+  if (!EDITOR_SECRET) return false;
+  const a = crypto.createHash("sha256").update(String(word || "").trim()).digest();
+  const b = crypto.createHash("sha256").update(EDITOR_SECRET).digest();
+  return crypto.timingSafeEqual(a, b);
+}
+
 const PORT = process.env.PORT || 3000;
 
 // ---------- Storage ----------
@@ -90,10 +103,13 @@ app.get("/api/stream", async (req, res) => {
   });
 });
 
+app.post("/api/login", (req, res) => {
+  res.json({ editor: isEditor(req.body && req.body.username) });
+});
+
 app.post("/api/press", async (req, res) => {
-  const username = String((req.body && req.body.username) || "").trim();
-  if (username !== EDITOR) {
-    return res.status(403).json({ error: "Only excusemeee can change the counter" });
+  if (!isEditor(req.body && req.body.username)) {
+    return res.status(403).json({ error: "Not allowed" });
   }
   const count = await store.increment();
   broadcast(count);

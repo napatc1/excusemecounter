@@ -2,7 +2,7 @@
 
 A website that asks **"Enter a Username:"**.
 
-- If the username is `excusemeee`, every press of the **spacebar** adds 1 to the counter.
+- If the username is the secret word, every press of the **spacebar** adds 1 to the counter.
 - Anyone else sees the same big number update live, but can't change it.
 - The count never resets.
 
@@ -10,8 +10,10 @@ A website that asks **"Enter a Username:"**.
 
 ```bash
 npm install
-npm start
+EDITOR_SECRET=yourSecretWord npm start
 ```
+
+The secret word is only ever stored in the `EDITOR_SECRET` environment variable, never in the code. On a host like Render, add it under Environment Variables.
 
 Then open http://localhost:3000.
 

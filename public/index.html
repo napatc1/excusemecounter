@@ -79,14 +79,13 @@
   </form>
 
   <div id="counter">
-    <h1 id="title">Times excusemeee pressed SPACE</h1>
+    <h1 id="title">Spacebar presses</h1>
     <div id="count">0</div>
     <div id="hint"></div>
     <button id="tap">Press (for phones)</button>
   </div>
 
   <script>
-    const EDITOR = "excusemeee";
     let username = "";
     let isEditor = false;
 
@@ -118,17 +117,24 @@
       } catch {}
     }
 
-    document.getElementById("login").addEventListener("submit", (e) => {
+    document.getElementById("login").addEventListener("submit", async (e) => {
       e.preventDefault();
       username = document.getElementById("username").value.trim();
       if (!username) return;
-      isEditor = username === EDITOR;
+      try {
+        const r = await fetch("/api/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ username }),
+        });
+        isEditor = r.ok && (await r.json()).editor === true;
+      } catch { isEditor = false; }
 
       document.getElementById("login").style.display = "none";
       document.getElementById("counter").style.display = "block";
       hintEl.textContent = isEditor
-        ? "Hi excusemeee! Press the SPACEBAR to add 1."
-        : "Watching as " + username + ". Only excusemeee can change the counter.";
+        ? "Press the SPACEBAR to add 1."
+        : "Watching as " + username + ".";
       if (isEditor) tapBtn.style.display = "inline-block";
       connect();
     });

@@ -1,7 +1,7 @@
 {
   "name": "excusemecounter",
   "version": "1.0.0",
-  "description": "Live counter of how many times excusemeee has pressed the spacebar",
+  "description": "Live counter of how many times the spacebar has been pressed the spacebar",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
